@@ -1,7 +1,18 @@
 import numpy as np
+import pandas as pd
 import cv2
 from utilities import process_frame, get_bin_image
 
+def bubble_detector(stats, centroid, th=40):
+    """
+    A simple bubble detector. If a connected component enters the 
+    detection area and its area is greater than TH, it would be 
+    detected.
+
+    :stats:         stats returned from cv2.connectedCom..
+    :centroid:      position of bubble center
+    :th:            bubble area threshold
+    """
 
 def main():
 
@@ -24,8 +35,12 @@ def main():
     HEIGHT = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
     WIDTH = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH))
     LENGTH = int(vc.get(cv2.CAP_PROP_FRAME_COUNT))
-    DETECTION_LOW_LIM = 480     # the line below
+    DETECTION_LOW_LIM = 500     # the line below
     DETECTION_UP_LIM = 430      # the line above
+
+    bubble_counter = 0          # global count of bubblesk
+    detected_bubble = pd.DataFrame(columns=['stats', 'centroid', 'is_counted'])
+    
 
     while ret:
         ret, frame = vc.read()
@@ -34,14 +49,16 @@ def main():
         edge_frame = process_frame(frame)
         bin_bubble_frame = get_bin_image(edge_frame, bg_edge)
 
+        # Perform connected component analysis
         output = cv2.connectedComponentsWithStats(
             bin_bubble_frame, connectivity=8, ltype=cv2.CV_32S)
         num_labels, labels, stats, centroids = output
 
-        for this_stat in stats[1:]:
-            if this_stat[4] > 40:
-                cv2.rectangle(frame, (this_stat[0:2]), (this_stat[0:2]+this_stat[2:4]),
-                              (0, 0, 255), 2)
+        for label in range(num_labels):
+            if DETECTION_LOW_LIM > centroids[label, 1] and centroids[label, 1] > DETECTION_UP_LIM and stats[label, 4] > 40:
+
+
+                cv2.rectangle(frame, (stats[label, 0:2]), (stats[label, 0:2]+stats[label, 2:4]), (0, 0, 255), 2)
         
         # Draw detection line below
         cv2.line(frame, (0, DETECTION_LOW_LIM), (WIDTH, DETECTION_LOW_LIM), (0, 0, 255), 1)
