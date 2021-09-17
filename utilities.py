@@ -62,16 +62,21 @@ def get_bin_image(edge_frame, bg_edge, threshold=70):
 
 def new_method(frame, bg_frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])):
     """
-    Test method
+    Test method: perform background subtraction first, then perform edge detection.
+    This method has been proven poor.
+
+    :frame:             input frame
+    :bg_frame:          input background frame
+    :sharpen_kernel:    kernel to perform image sharpening
     """
 
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
     bg_frame = cv2.cvtColor(bg_frame, cv2.COLOR_RGB2GRAY)
     height, width = frame.shape
-    
+
     bg_frame_blur = cv2.GaussianBlur(bg_frame, (3, 3), 0)
     bubble_frame = cv2.subtract(frame, bg_frame_blur)
-    
+
     # Sharpen frame
     sharpened_frame = cv2.filter2D(bubble_frame, -1, sharpen_kernel)
 
@@ -88,7 +93,7 @@ def new_method(frame, bg_frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -
     # Image threshold
     ret, bin_bubble_frame = cv2.threshold(
         bubble_frame_blur, 70, 255, cv2.THRESH_BINARY)
-    
+
     # Flood filling the holes of bubbles
     bubble_frame_floodfill = bin_bubble_frame.copy()
 
@@ -104,7 +109,7 @@ def new_method(frame, bg_frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -
 
 
 if __name__ == '__main__':
-    
+
     vc = cv2.VideoCapture("output.mp4")
     ret, bg_frame = vc.read()
 
@@ -112,7 +117,7 @@ if __name__ == '__main__':
         ret, frame = vc.read()
         if frame is None:
             break
-        
+
         bin_bubble_frame = new_method(frame, bg_frame)
 
         # # Get bubble binary image
@@ -138,4 +143,3 @@ if __name__ == '__main__':
         keyboard = cv2.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
             break
-
