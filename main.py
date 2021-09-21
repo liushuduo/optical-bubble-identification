@@ -3,16 +3,6 @@ import pandas as pd
 import cv2
 from utilities import process_frame, get_bin_image
 
-def bubble_detector(stats, centroid, th=40):
-    """
-    A simple bubble detector. If a connected component enters the 
-    detection area and its area is greater than TH, it would be 
-    detected.
-
-    :stats:         stats returned from cv2.connectedCom..
-    :centroid:      position of bubble center
-    :th:            bubble area threshold
-    """
 
 def main():
 
@@ -35,10 +25,9 @@ def main():
     HEIGHT = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
     WIDTH = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH))
     LENGTH = int(vc.get(cv2.CAP_PROP_FRAME_COUNT))
-    DETECTION_LOW_LIM = 500     # the line below
-    DETECTION_UP_LIM = 430      # the line above
+    DETECTION_BOX = [0, 430, WIDTH, 70]     # box of detection area
 
-    bubble_counter = 0          # global count of bubblesk
+    bubble_counter = 0                      # global count of bubblesk
     detected_bubble = pd.DataFrame(columns=['stats', 'centroid', 'is_counted'])
     
 
