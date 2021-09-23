@@ -5,12 +5,21 @@ import cv2
 def is_inarea(centroid, DETECTION_BOX):
     """
     Detect if centroid is in the area of DETECTION_BOX
-    """
-    if centroid - DETECTION_BOX[0:2] < DETECTION_BOX[2:4]:
-        return True 
-    
 
-def is_inshape(stats):
+    :centroid: (x, y) coordinate of bubble centroid
+    :DETECTION_BOX: (x, y, width, height) top-left corner coordinate and box width and height
+    """
+
+    within_bottom_right = centroid - DETECTION_BOX[0:2] < DETECTION_BOX[2:4]
+    beyond_top_left = centroid - DETECTION_BOX[0:2] > np.array([0, 0])
+
+    if np.all((within_bottom_right, beyond_top_left)):
+        return True
+    else:
+        return False
+
+
+def is_inshape(stat):
     """
     Detect if the connected component is in shape of bubble
 
@@ -20,16 +29,17 @@ def is_inshape(stats):
             cv2.CC_STAT_HEIGHT The vertical size of the bounding box
             cv2.CC_STAT_AREA The total area (in pixels) of the connected component
     """
-    if stats[4] < 40:
+    if stat[4] < 40:
         # component with area less than 40 pixel^2 is not considered as bubble
         return False
 
-    elif stats[4] > 5000:
+    elif stat[4] > 5000:
         #  component with area larger than 5000 pixel^2 is not considered
         return False
 
     else:
         return True
+
 
 def bubble_detector(stats, centroid, DETECTION_BOX):
     """
@@ -42,6 +52,7 @@ def bubble_detector(stats, centroid, DETECTION_BOX):
     :th:            bubble area threshold
     """
     return (is_inarea(centroid, DETECTION_BOX) and is_inshape(stats))
+
 
 def process_frame(frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])):
     """ 
