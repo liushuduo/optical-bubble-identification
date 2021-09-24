@@ -27,18 +27,18 @@ def update_bubble(new_bubble_table, old_bubble_table):
 
         old_bubble_table_temp = old_bubble_table.copy()
 
-        # Compute the azumith between any old bubble and new bubble
+        # Compute the azimuth between any old bubble and new bubble
         relative_coordinate = np.stack(
             old_bubble_table['centroid'].to_numpy()) - new_bubble['centroid']
-        old_bubble_table_temp['azumith'] = np.arctan2(
+        old_bubble_table_temp['azimuth'] = np.arctan2(
             relative_coordinate[:, 1], relative_coordinate[:, 0])
         old_bubble_table_temp['distance'] = np.linalg.norm(
             relative_coordinate, axis=1)
 
         # Find satisfied bubbles
         satisfied_bubbles = old_bubble_table_temp[
-            (old_bubble_table_temp['azumith'] < np.pi/3*2) &
-            (old_bubble_table_temp['azumith'] > np.pi/3) &
+            (old_bubble_table_temp['azimuth'] < np.pi/3*2) &
+            (old_bubble_table_temp['azimuth'] > np.pi/3) &
             (old_bubble_table_temp['distance'] < BUBBLE_MAXIMUM_MOVEMENT)]
 
         if not satisfied_bubbles.empty:
@@ -114,7 +114,7 @@ def show_detected_bubble(frame, bubble_table, vc):
                 (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
     if FIRST_PERIOD_END_TIME <= current_time and current_time < FIRST_PERIOD_END_TIME+1/vc.get(cv2.CAP_PROP_FPS):
-        cv2.imwrite('bubble-detection.png', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'), cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     cv2.imshow('Frame', frame)
 
