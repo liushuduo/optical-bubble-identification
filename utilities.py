@@ -1,12 +1,6 @@
 import numpy as np
 import cv2
 
-def shape2volume(stat, cm_px_ratio):
-    approx_radius_px = np.sqrt(np.mean(stat[4]) / np.pi)
-    approx_radius_cm = approx_radius_px * cm_px_ratio
-    approx_volumn = 4/3 * np.pi * pow(approx_radius_cm, 3)
-    return approx_volumn
-
 
 def is_inarea(centroid, DETECTION_BOX):
     """

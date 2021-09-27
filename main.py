@@ -2,22 +2,48 @@ import numpy as np
 import pandas as pd
 import cv2
 
-from utilities import process_frame, get_bin_image, bubble_detector, shape2volume
+from utilities import process_frame, get_bin_image, bubble_detector
 
 # Global constants
 BUBBLE_MAXIMUM_MOVEMENT = 30
 WIDTH = 1280
 DETECTION_BOX = np.array([0, 430, WIDTH, 70])       # box of detection area
 CM_PX_RATIO = 9e-3                                  # ratio for convert px to cm
-FIRST_PERIOD_END_TIME = 122.69                      # end time of first gas injection
+# end time of first gas injection
+FIRST_PERIOD_END_TIME = 122.69
+SHOW_VIDEO = True                                   # show video while processing?
 
 # Statistics
 BUBBLE_COUNTER = 0
 TOTAL_VOLUME = 0                                    # unit: mL
+RECORDED_BUBBLE = pd.DataFrame(columns=['radius', 'movement'])
+
+
+def estimate_radius(stat, shape=None):
+    """
+    Estimate radius of bubble according to stat returned form connected component analysis
+    Bubble shape maybe used further 
+
+    :stat: [left_top_x, left_top_y, width, height, area]
+    :shape: undefined
+    """
+
+    approx_radius_px = np.sqrt(np.mean(stat[4]) / np.pi)
+    approx_radius_cm = approx_radius_px * CM_PX_RATIO
+    return approx_radius_cm
 
 
 def update_bubble(new_bubble_table, old_bubble_table):
+    """
+    Find relation between old bubble table and new bubble table according to some constraints
 
+    bubble_table <pd.DataFrame>
+        'centroid' | 'is_counted' | 'stat' 
+    0    (x, y)       True/False     [stat] 
+
+    :new_bubble_table: new detected bubbles
+    :old_bubble_table: old detected bubbles
+    """
     if old_bubble_table.empty:
         # If there is no bubbles detected before, all new detected bubbles are uncounted
         new_bubble_table['is_counted'] = False
@@ -56,7 +82,17 @@ def update_bubble(new_bubble_table, old_bubble_table):
                 BUBBLE_COUNTER += 1
 
                 global TOTAL_VOLUME
-                TOTAL_VOLUME += shape2volume(new_bubble['stat'], CM_PX_RATIO)
+                r_hat = estimate_radius(new_bubble['stat'])
+                TOTAL_VOLUME += 4/3 * np.pi * pow(r_hat, 3)
+
+                global RECORDED_BUBBLE
+                # bubble movement: (-up/+down, -left/+right)
+                bubble_movement = new_bubble['centroid'] - \
+                    old_bubble_table['centroid'].at(old_bubble_id)
+                RECORDED_BUBBLE = RECORDED_BUBBLE.append(
+                    {'radius': r_hat, 'movement': bubble_movement},
+                    ignore_index=True
+                )
 
                 new_bubble['is_counted'] = True
                 old_bubble_table['is_counted'].at[old_bubble_id] = True
@@ -66,10 +102,17 @@ def update_bubble(new_bubble_table, old_bubble_table):
             new_bubble['is_counted'] = False
 
 
-def bubble_detection(output, frame):
+def bubble_detection(cca_output):
+    """
+    Detect bubbles from the output of connected component analysis
+    The detection criterion is determined by bubble_detector
+
+    :cca_output: output of connected component analysis
+    """
+
     new_detected_bubble = pd.DataFrame(
         columns=['centroid', 'is_counted', 'stat'])
-    num_labels, labels, stats, centroids = output
+    num_labels, labels, stats, centroids = cca_output
 
     for label in range(num_labels):
         this_stat = stats[label]
@@ -85,8 +128,10 @@ def bubble_detection(output, frame):
     return new_detected_bubble
 
 
-def show_detected_bubble(frame, bubble_table, vc):
-
+def add_detected_bubble_box(frame, bubble_table):
+    """
+    Add 
+    """
     # Draw bubble boxes
     for idx, bubble in bubble_table.iterrows():
         if bubble['is_counted']:
@@ -109,14 +154,10 @@ def show_detected_bubble(frame, bubble_table, vc):
     cv2.putText(frame, ('VOLUME: '+'{:.5f}'.format(TOTAL_VOLUME) + ' mL'), (15, 35),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
-    current_time = vc.get(cv2.CAP_PROP_POS_FRAMES)/vc.get(cv2.CAP_PROP_FPS)
     cv2.putText(frame, ('TIME: ' + '{:.2f}'.format(current_time)+' s'),
                 (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
-    if FIRST_PERIOD_END_TIME <= current_time and current_time < FIRST_PERIOD_END_TIME+1/vc.get(cv2.CAP_PROP_FPS):
-        cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'), cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-
-    cv2.imshow('Frame', frame)
+    return frame
 
 
 def initialization(filename):
@@ -134,6 +175,11 @@ def initialization(filename):
     return ret, vc, bg_edge
 
 
+def generate_result(frame, bubble_table, show_video=False):
+    pass
+
+
+    
 def main():
 
     ret, vc, bg_edge = initialization('output.mp4')
@@ -143,8 +189,10 @@ def main():
         columns=['centroid', 'is_counted', 'stat'])
 
     while ret:
-        # Read frame
+        # Read frame and get current time
         ret, frame = vc.read()
+        current_time = vc.get(cv2.CAP_PROP_POS_FRAMES) / \
+                vc.get(cv2.CAP_PROP_FPS)
 
         # Get bubble binary image
         edge_frame = process_frame(frame)
@@ -160,15 +208,31 @@ def main():
         # Constraints tracking
         update_bubble(new_detected_bubble, old_detected_bubble)
 
+        # Generate result
+        generate_result()
+
         # Show result
-        show_detected_bubble(frame, new_detected_bubble, vc)
+        if SHOW_VIDEO:
+            current_time = show_detected_bubble(frame, new_detected_bubble, vc)
+        else:
+            current_time = vc.get(cv2.CAP_PROP_POS_FRAMES) / \
+                vc.get(cv2.CAP_PROP_FPS)
 
         # Update detected bubble table
         old_detected_bubble = new_detected_bubble
 
+        # Keyboard break
         keyboard = cv2.waitKey(1)
         if keyboard == 'q' or keyboard == 27:
             break
+
+        # End processing
+        if FIRST_PERIOD_END_TIME < current_time:
+            save_result()
+            cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'),
+                        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+        current_time = vc.get(cv2.CAP_PROP_POS_FRAMES)/vc.get(cv2.CAP_PROP_FPS)
 
 
 if __name__ == '__main__':
