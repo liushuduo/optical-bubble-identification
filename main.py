@@ -86,8 +86,7 @@ def update_bubble(new_bubble_table, old_bubble_table):
 
                 global RECORDED_BUBBLE
                 # bubble movement: (-up/+down, -left/+right)
-                bubble_movement = new_bubble['centroid'] - \
-                    old_bubble_table['centroid'].at(old_bubble_id)
+                bubble_movement = new_bubble['centroid'] - old_bubble_table['centroid'].at[old_bubble_id]
                 RECORDED_BUBBLE = RECORDED_BUBBLE.append(
                     {'radius': r_hat, 'movement': bubble_movement},
                     ignore_index=True
@@ -127,7 +126,7 @@ def bubble_detection(cca_output):
     return new_detected_bubble
 
 
-def add_detected_bubble_box(frame, bubble_table):
+def add_detected_bubble_box(frame, bubble_table, current_time):
     """
     Add boxes that surround bubbles to the frame according to bubble_table
 
@@ -177,11 +176,12 @@ def initialization(filename):
     return ret, vc, bg_edge
 
 
-def generate_result(frame, bubble_table, show_video=False):
-    pass
+def save_results(frame):
+    cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'),
+                cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    RECORDED_BUBBLE.to_csv('result.csv')
 
 
-    
 def main():
 
     ret, vc, bg_edge = initialization('output.mp4')
@@ -205,36 +205,29 @@ def main():
             bin_bubble_frame, connectivity=8, ltype=cv2.CV_32S)
 
         # Bubble detection
-        new_detected_bubble = bubble_detection(output, frame)
+        new_detected_bubble = bubble_detection(output)
 
         # Constraints tracking
         update_bubble(new_detected_bubble, old_detected_bubble)
-
-        # Generate result
-        generate_result()
-
-        # Show result
-        if SHOW_VIDEO:
-            current_time = show_detected_bubble(frame, new_detected_bubble, vc)
-        else:
-            current_time = vc.get(cv2.CAP_PROP_POS_FRAMES) / \
-                vc.get(cv2.CAP_PROP_FPS)
-
+        
         # Update detected bubble table
         old_detected_bubble = new_detected_bubble
 
+        # Show result
+        if SHOW_VIDEO:
+            show_frame = add_detected_bubble_box(frame, old_detected_bubble, current_time)
+            cv2.imshow('Result', show_frame)
+        
         # Keyboard break
         keyboard = cv2.waitKey(1)
         if keyboard == 'q' or keyboard == 27:
             break
 
-        # End processing
-        if FIRST_PERIOD_END_TIME < current_time:
-            save_result()
-            cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'),
-                        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-
-        current_time = vc.get(cv2.CAP_PROP_POS_FRAMES)/vc.get(cv2.CAP_PROP_FPS)
+        # End processing and save result
+        if current_time > FIRST_PERIOD_END_TIME:
+            frame = add_detected_bubble_box(frame, old_detected_bubble, current_time)
+            save_results(frame)
+            break
 
 
 if __name__ == '__main__':
