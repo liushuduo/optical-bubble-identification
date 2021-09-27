@@ -4,13 +4,12 @@ import cv2
 
 from utilities import process_frame, get_bin_image, bubble_detector
 
-# Global constants
+# Global constants / Hyperparameters
 BUBBLE_MAXIMUM_MOVEMENT = 30
 WIDTH = 1280
 DETECTION_BOX = np.array([0, 430, WIDTH, 70])       # box of detection area
 CM_PX_RATIO = 9e-3                                  # ratio for convert px to cm
-# end time of first gas injection
-FIRST_PERIOD_END_TIME = 122.69
+FIRST_PERIOD_END_TIME = 122.69                      # end time of first gas injection
 SHOW_VIDEO = True                                   # show video while processing?
 
 # Statistics
@@ -130,7 +129,10 @@ def bubble_detection(cca_output):
 
 def add_detected_bubble_box(frame, bubble_table):
     """
-    Add 
+    Add boxes that surround bubbles to the frame according to bubble_table
+
+    :frame: frame to be processed
+    :bubble_table: detected bubble table
     """
     # Draw bubble boxes
     for idx, bubble in bubble_table.iterrows():
