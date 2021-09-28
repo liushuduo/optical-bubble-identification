@@ -177,6 +177,11 @@ def initialization(filename):
 
 
 def save_results(frame):
+    """
+    Save statistics
+
+    :frame: frame to save
+    """
     cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'),
                 cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     RECORDED_BUBBLE.to_csv('result.csv')
