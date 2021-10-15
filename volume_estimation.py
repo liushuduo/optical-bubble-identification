@@ -10,7 +10,8 @@ WIDTH = 1280
 DETECTION_BOX = np.array([0, 430, WIDTH, 70])       # box of detection area
 CM_PX_RATIO = 9e-3                                  # ratio for convert px to cm
 FIRST_PERIOD_END_TIME = 122.69                      # end time of first gas injection
-SHOW_VIDEO = True                                   # show video while processing?
+SHOW_VIDEO = False                                  # show video while processing?
+FILE_NAME = 'segment01.mp4'
 
 # Statistics
 BUBBLE_COUNTER = 0
@@ -73,7 +74,7 @@ def update_bubble(new_bubble_table, old_bubble_table):
 
             if old_bubble_table['is_counted'].at[old_bubble_id]:
                 # If the bubble had been counted, update the is_counted status
-                new_bubble['is_counted'] = True
+                new_bubble_table.loc[new_id, 'is_counted'] = True
 
             else:
                 # If the bubble hasn't been counted, count the bubble and estimate its volumn
@@ -92,12 +93,12 @@ def update_bubble(new_bubble_table, old_bubble_table):
                     ignore_index=True
                 )
 
-                new_bubble['is_counted'] = True
+                new_bubble_table.loc[new_id, 'is_counted'] = True
                 old_bubble_table['is_counted'].at[old_bubble_id] = True
 
         else:
             # No satisfied previous bubble finded, take it as new uncounted detected bubble
-            new_bubble['is_counted'] = False
+            new_bubble_table[new_id, 'is_counted'] = False
 
 
 def bubble_detection(cca_output):
@@ -176,20 +177,21 @@ def initialization(filename):
     return ret, vc, bg_edge
 
 
-def save_results(frame):
+def save_results(frame, filetype='pkl'):
     """
     Save statistics
 
     :frame: frame to save
     """
-    cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'),
-                cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    RECORDED_BUBBLE.to_csv('result.csv')
+    cv2.imwrite((str.split(FILE_NAME, '.')[0]+'-ratio-'+str(CM_PX_RATIO)+'.png'),frame)
+    RECORDED_BUBBLE.to_pickle(str.split(FILE_NAME, '.')[0]+'-volume-result.pkl')
+    print('Results have been saved!')
 
 
 def main():
 
-    ret, vc, bg_edge = initialization('output.mp4')
+    ret, vc, bg_edge = initialization(FILE_NAME)
+    total_frame = vc.get(cv2.CAP_PROP_FRAME_COUNT)
 
     # Initialize detected bubble table
     old_detected_bubble = pd.DataFrame(
@@ -198,8 +200,8 @@ def main():
     while ret:
         # Read frame and get current time
         ret, frame = vc.read()
-        current_time = vc.get(cv2.CAP_PROP_POS_FRAMES) / \
-                vc.get(cv2.CAP_PROP_FPS)
+        current_frame = vc.get(cv2.CAP_PROP_POS_FRAMES)
+        current_time = current_frame / vc.get(cv2.CAP_PROP_FPS)
 
         # Get bubble binary image
         edge_frame = process_frame(frame)
@@ -222,14 +224,17 @@ def main():
         if SHOW_VIDEO:
             show_frame = add_detected_bubble_box(frame, old_detected_bubble, current_time)
             cv2.imshow('Result', show_frame)
-        
-        # Keyboard break
-        keyboard = cv2.waitKey(1)
-        if keyboard == 'q' or keyboard == 27:
-            break
+            # Keyboard break
+            keyboard = cv2.waitKey(1)
+            if keyboard == 'q' or keyboard == 27:
+                break
+        else:
+            if current_frame % (240) < 1:
+                print(('Current Time: '+'{:.3f}'.format(current_time)+' s'))
+            
 
         # End processing and save result
-        if current_time > FIRST_PERIOD_END_TIME:
+        if current_frame > total_frame - 120:
             frame = add_detected_bubble_box(frame, old_detected_bubble, current_time)
             save_results(frame)
             break

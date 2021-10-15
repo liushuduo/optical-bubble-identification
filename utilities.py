@@ -2,6 +2,15 @@ import numpy as np
 import cv2
 
 
+def num2bgr(x, color_num=18):
+    """
+    Mapping a number into bgr color tuple
+    """
+    hsv_tuple  = np.array([[[(x* (360/color_num)) % 360, 100, 100]]], dtype='uint8')
+    bgr_tuple = cv2.cvtColor(hsv_tuple, cv2.COLOR_HSV2BGR)
+    return tuple(map(int, bgr_tuple.squeeze()))
+
+
 def is_inarea(centroid, DETECTION_BOX):
     """
     Detect if centroid is in the area of DETECTION_BOX
@@ -160,8 +169,7 @@ def new_method(frame, bg_frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -
     return bubble_frame_result
 
 
-if __name__ == '__main__':
-
+def main():
     vc = cv2.VideoCapture("output.mp4")
     ret, bg_frame = vc.read()
 
@@ -195,3 +203,15 @@ if __name__ == '__main__':
         keyboard = cv2.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
             break
+
+
+def test():
+    """
+    Run test script.
+    """
+    test_num = 0
+    result = num2bgr(test_num)
+    print(result)
+
+if __name__ == '__main__':
+    test()

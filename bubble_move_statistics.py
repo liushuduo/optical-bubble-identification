@@ -11,7 +11,7 @@ WIDTH = 1280
 DETECTION_BOX = np.array([0, 150, WIDTH, 350])
 CM_PX_RATIO = 9e-3                                  # ratio for convert px to cm
 FIRST_PERIOD_END_TIME = 122.69                      # end time of first gas injection
-SHOW_VIDEO = True                                   # show video while processing?
+SHOW_VIDEO = False                                  # show video while processing?
 FILE_NAME = 'segment01.mp4'
 
 # Statistics: dataframe used to record bubble radius, movement and depth evolution
@@ -212,7 +212,7 @@ def save_results(frame):
 
     :frame: frame to save
     """
-    cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'))
+    cv2.imwrite(('ratio-'+str(CM_PX_RATIO)+'.png'), frame)
     # RECORDED_BUBBLE_PX.to_csv((__file__+'result.csv'))
     RECORDED_BUBBLE_PX.to_pickle((str.split(FILE_NAME, '.')[0]+'-bubble-movement'))
 
