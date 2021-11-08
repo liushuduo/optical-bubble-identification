@@ -12,5 +12,7 @@ def main():
 
     # Read the first frame as background
     ret, frame = vc.read()
-    gray_frame = 1
-    
+    cv2.imwrite('background.png', frame)
+
+if __name__ == '__main__':
+    main() 

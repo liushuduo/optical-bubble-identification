@@ -201,7 +201,8 @@ def main():
         # Read frame and get current time
         ret, frame = vc.read()
         current_frame = vc.get(cv2.CAP_PROP_POS_FRAMES)
-        current_time = current_frame / vc.get(cv2.CAP_PROP_FPS)
+        video_fps = vc.get(cv2.CAP_PROP_FPS)
+        current_time = current_frame / video_fps
 
         # Get bubble binary image
         edge_frame = process_frame(frame)
@@ -220,18 +221,30 @@ def main():
         # Update detected bubble table
         old_detected_bubble = new_detected_bubble
 
+        show_frame = add_detected_bubble_box(frame, old_detected_bubble, current_time)
+
         # Show result
         if SHOW_VIDEO:
-            show_frame = add_detected_bubble_box(frame, old_detected_bubble, current_time)
             cv2.imshow('Result', show_frame)
             # Keyboard break
             keyboard = cv2.waitKey(1)
             if keyboard == 'q' or keyboard == 27:
                 break
         else:
+            # show progress and save picture every second
             if current_frame % (240) < 1:
                 print(('Current Time: '+'{:.3f}'.format(current_time)+' s'))
+                # save figure every second
+                filename = './' + str.split(FILE_NAME, '.')[0] + '/screenshot-' + '{:03d}'.format(int(current_time))+'s.png'
+                cv2.imwrite(filename, show_frame)
             
+        # Save processing pictures    
+        start_recording_frame = 240 * 2 
+        end_recording_frame = 240 * 3 
+        if start_recording_frame <= current_frame and current_frame < end_recording_frame:
+            filename = './processing_gif/'+ '{:03d}'.format(int(current_frame-start_recording_frame)) + '.png'
+            cv2.imwrite(filename, show_frame)
+
 
         # End processing and save result
         if current_frame > total_frame - 120:

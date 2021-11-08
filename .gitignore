@@ -132,4 +132,7 @@ dmypy.json
 data
 *.mp4
 bubble-frames
-
+processing_gif
+segment01
+segment02
+segment03
