@@ -168,6 +168,37 @@ def new_method(frame, bg_frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -
 
     return bubble_frame_result
 
+def frame_edge(frame, sharpen_kernel=np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])):
+    """ 
+    Detect the edge of frame
+
+    :frame:             a single frame
+    :sharpen_kernel:    kernel of filter for sharpening image
+    :return:            detected edge of frame
+    """
+
+    # Convert to gray
+    if frame.ndim == 3: 
+        # if the image has color channel
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    else:
+        gray_frame = frame 
+
+    # Sharpen frame
+    sharpened_frame = cv2.filter2D(gray_frame, -1, sharpen_kernel)
+
+    # Edge detection using absolute Sobel detector
+    dx = cv2.Sobel(sharpened_frame, cv2.CV_64F, 1, 0)
+    dy = cv2.Sobel(sharpened_frame, cv2.CV_64F, 0, 1)
+    abs_dx = cv2.convertScaleAbs(dx)
+    abs_dy = cv2.convertScaleAbs(dy)
+    edge_frame = cv2.addWeighted(abs_dx, 0.5, abs_dy, 0.5, 0)
+
+    return edge_frame
+
+
+def frame_edge_rmbg(frame_edge, frame_bgedge): 
+    return cv2.subtract(frame_edge, frame_bgedge)
 
 def main():
     vc = cv2.VideoCapture("output.mp4")
